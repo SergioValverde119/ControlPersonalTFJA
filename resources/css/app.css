@@ -9,13 +9,14 @@
 
 @theme inline {
     --font-sans:
-        Instrument Sans, ui-sans-serif, system-ui, sans-serif,
+        Arial, 'Noto Sans', ui-sans-serif, system-ui, sans-serif,
         'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol',
         'Noto Color Emoji';
+    --font-serif: 'TFJA Serif', Georgia, Cambria, 'Times New Roman', serif;
 
     --radius-lg: var(--radius);
-    --radius-md: calc(var(--radius) - 2px);
-    --radius-sm: calc(var(--radius) - 4px);
+    --radius-md: calc(var(--radius) - 1px);
+    --radius-sm: calc(var(--radius) - 2px);
 
     --color-background: var(--background);
     --color-foreground: var(--foreground);
@@ -59,6 +60,36 @@
     --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
     --color-sidebar-border: var(--sidebar-border);
     --color-sidebar-ring: var(--sidebar-ring);
+
+
+    /* Colores oficiales del TFJA*/
+    --color-tfja-blue: #01273e;
+    --color-tfja-blue-hover: #083D60;
+    --color-tfja-blue-nav: #1a3d54;
+    --color-tfja-blue-dark: #011C2D;
+    --color-tfja-bronze: #b67238;
+    --color-tfja-bronze-hover: #C98246;
+    --color-tfja-bronze-dark: #9B5F2D;
+    --color-tfja-bg: #dbe2e8;
+    --color-tfja-border: #cbd5e1;
+    --color-winsiaf-cream: #feffea;
+
+    /* Semántica de Estatus para Movimientos */
+    --color-status-draft-bg: #f1f5f9;
+    --color-status-draft-text: #475569;
+    --color-status-draft-border: #cbd5e1;
+    --color-status-review-bg: #fef3c7;
+    --color-status-review-text: #92400e;
+    --color-status-review-border: #fcd34d;
+    --color-status-parallel-bg: #e0f2fe;
+    --color-status-parallel-text: #0369a1;
+    --color-status-parallel-border: #bae6fd;
+    --color-status-approved-bg: #dcfce7;
+    --color-status-approved-text: #166534;
+    --color-status-approved-border: #86efac;
+    --color-status-rejected-bg: #fee2e2;
+    --color-status-rejected-text: #991b1b;
+    --color-status-rejected-border: #fca5a5;
 }
 
 /*
@@ -75,7 +106,16 @@
     ::before,
     ::backdrop,
     ::file-selector-button {
-        border-color: var(--color-gray-200, currentColor);
+        border-color: var(--color-gray-300, currentColor);
+    
+    }
+
+    * {
+        @apply border-border outline-ring/50;
+    }
+
+    body {
+        @apply bg-[#dbe2e8] text-foreground font-sans;
     }
 }
 
@@ -90,40 +130,47 @@
 }
 
 :root {
-    --background: hsl(0 0% 100%);
-    --foreground: hsl(0 0% 3.9%);
-    --card: hsl(0 0% 100%);
-    --card-foreground: hsl(0 0% 3.9%);
+/* Fondo y Superficies */
+    --background: hsl(208 24% 88%);       /* #DBE2E8 Fondo WIN-SIAF */
+    --foreground: hsl(203 97% 12%);       /* #01273E Azul TFJA */
+    --card: hsl(0 0% 100%);               /* Blanco Puro */
+    --card-foreground: hsl(215 25% 27%);
     --popover: hsl(0 0% 100%);
-    --popover-foreground: hsl(0 0% 3.9%);
-    --primary: hsl(0 0% 9%);
-    --primary-foreground: hsl(0 0% 98%);
-    --secondary: hsl(0 0% 92.1%);
-    --secondary-foreground: hsl(0 0% 9%);
-    --muted: hsl(0 0% 96.1%);
-    --muted-foreground: hsl(0 0% 45.1%);
-    --accent: hsl(0 0% 96.1%);
-    --accent-foreground: hsl(0 0% 9%);
+    --popover-foreground: hsl(215 25% 27%);
+
+    /* Primario: Azul TFJA (Pantone 539 C) */
+    --primary: hsl(203 97% 12%);
+    --primary-foreground: hsl(0 0% 100%);
+
+    /* Secundario: Botones Inactivos WIN-SIAF (#AABAC8) */
+    --secondary: hsl(208 23% 73%);
+    --secondary-foreground: hsl(203 97% 12%);
+
+    --muted: hsl(210 20% 96%);
+    --muted-foreground: hsl(215 16% 47%);
+
+    /* Acento: Bronce TFJA (Pantone 7572 C) */
+    --accent: hsl(28 53% 47%);
+    --accent-foreground: hsl(0 0% 100%);
+
     --destructive: hsl(0 84.2% 60.2%);
     --destructive-foreground: hsl(0 0% 98%);
-    --border: hsl(0 0% 92.8%);
-    --input: hsl(0 0% 89.8%);
-    --ring: hsl(0 0% 3.9%);
-    --chart-1: hsl(12 76% 61%);
-    --chart-2: hsl(173 58% 39%);
-    --chart-3: hsl(197 37% 24%);
-    --chart-4: hsl(43 74% 66%);
-    --chart-5: hsl(27 87% 67%);
-    --radius: 0.5rem;
-    --sidebar-background: hsl(0 0% 98%);
-    --sidebar-foreground: hsl(240 5.3% 26.1%);
-    --sidebar-primary: hsl(0 0% 10%);
-    --sidebar-primary-foreground: hsl(0 0% 98%);
-    --sidebar-accent: hsl(0 0% 94%);
-    --sidebar-accent-foreground: hsl(0 0% 30%);
-    --sidebar-border: hsl(0 0% 91%);
-    --sidebar-ring: hsl(217.2 91.2% 59.8%);
-    --sidebar: hsl(0 0% 98%);
+    
+    --border: hsl(214 32% 80%);           /* #CBD5E1 */
+    --input: hsl(214 32% 80%);
+    --ring: hsl(28 53% 47%);              /* Enfoque en Bronce TFJA */
+
+    --radius: 0.125rem;                   /* Bordes rectos institucionales */
+
+    --sidebar-background: hsl(204 53% 22%); /* #1A3D54 */
+    --sidebar-foreground: hsl(0 0% 100%);
+    --sidebar-primary: hsl(28 53% 47%);
+    --sidebar-primary-foreground: hsl(0 0% 100%);
+    --sidebar-accent: hsl(203 97% 12%);
+    --sidebar-accent-foreground: hsl(0 0% 100%);
+    --sidebar-border: hsl(204 40% 30%);
+    --sidebar-ring: hsl(28 53% 47%);
+    --sidebar: hsl(204 53% 22%);
 }
 
 .dark {
