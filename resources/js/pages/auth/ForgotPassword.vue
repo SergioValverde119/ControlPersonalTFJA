@@ -12,7 +12,7 @@ import { email } from '@/routes/password';
 defineOptions({
     layout: {
         title: 'Forgot password',
-        description: 'Enter your email to receive a password reset link',
+        description: 'Ingresa tu correo para enviar un correo de autenticación',
     },
 });
 

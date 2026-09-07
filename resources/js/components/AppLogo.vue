@@ -1,19 +1,30 @@
 <script setup lang="ts">
-import { usePage } from '@inertiajs/vue3';
-import AppLogoIcon from '@/components/AppLogoIcon.vue';
-
-const name = usePage().props.name;
+const appTitle = 'GAD-YAR';
 </script>
 
 <template>
-    <div
-        class="flex aspect-square size-8 items-center justify-center rounded-md bg-sidebar-primary text-sidebar-primary-foreground"
-    >
-        <AppLogoIcon class="size-5 fill-current text-white dark:text-black" />
-    </div>
-    <div class="ml-1 grid flex-1 text-left text-sm">
-        <span class="mb-0.5 truncate leading-tight font-semibold">{{
-            name
-        }}</span>
+    <div class="flex items-center gap-x-3 select-none">
+        <!-- Escudo / Logotipo Oficial -->
+        <img
+            src="/logo-color-h.svg"
+            alt="Logotipo Oficial"
+            class="h-8 w-auto object-contain transition-all duration-200 group-hover:brightness-130 group-hover:contrast-150"
+        />
+
+        <!-- Logotipo Conmemorativo -->
+        <img
+            src="/logo-90-color.png"
+            alt="Logotipo Conmemorativo"
+            class="h-8 w-auto object-contain transition-all duration-200 group-hover:brightness-120 group-hover:contrast-125"
+        />
+
+        <!-- Separador institucional y Nombre del Sistema -->
+        <div class="border-l border-white/20 pl-3">
+            <span
+                class="text-sm font-bold tracking-wide text-white transition-colors duration-200 group-hover:text-tfja-bronze"
+            >
+                {{ appTitle }}
+            </span>
+        </div>
     </div>
 </template>

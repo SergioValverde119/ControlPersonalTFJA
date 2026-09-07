@@ -1,9 +1,11 @@
+<!-- eslint-disable import/order -->
 <script setup lang="ts">
 import { Link, usePage } from '@inertiajs/vue3';
-import { BookOpen, Folder, LayoutGrid, Menu, Search } from '@lucide/vue';
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+import { BookOpen, Folder, LayoutGrid, Menu, Search, CheckCheck, Handshake, GitCommitVertical, FilePlusCorner } from '@lucide/vue';
 import { computed } from 'vue';
 import AppLogo from '@/components/AppLogo.vue';
-import AppLogoIcon from '@/components/AppLogoIcon.vue';
+//import AppLogoIcon from '@/components/AppLogoIcon.vue';
 import Breadcrumbs from '@/components/Breadcrumbs.vue';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
@@ -34,8 +36,12 @@ import {
 import UserMenuContent from '@/components/UserMenuContent.vue';
 import { useCurrentUrl } from '@/composables/useCurrentUrl';
 import { getInitials } from '@/composables/useInitials';
+import { useModuleMemory } from '@/composables/useModuleMemory';
 import { toUrl } from '@/lib/utils';
 import { dashboard } from '@/routes';
+import  nuevoTramite  from '@/routes/nuevo-tramite';
+import estadoTramite from '@/routes/estado-tramite';
+import autorizar from '@/routes/autorizar';
 import type { BreadcrumbItem, NavItem } from '@/types';
 
 type Props = {
@@ -48,27 +54,50 @@ const props = withDefaults(defineProps<Props>(), {
 
 const page = usePage();
 const auth = computed(() => page.props.auth);
-const { isCurrentUrl, whenCurrentUrl } = useCurrentUrl();
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+const { isCurrentOrParentUrl ,isCurrentUrl, whenCurrentUrl } = useCurrentUrl();
+const { getModuleUrl } = useModuleMemory();
 
 const activeItemStyles =
-    'text-neutral-900 dark:bg-neutral-800 dark:text-neutral-100';
+    ' bg-tfja-blue-dark text-white font-semibold';
 
-const mainNavItems: NavItem[] = [
+// const mainNavItems: NavItem[] = [
+const mainNavItems = computed<NavItem[]>(() => [
     {
         title: 'Dashboard',
         href: dashboard(),
         icon: LayoutGrid,
     },
-];
+    {
+        title: 'Nuevo trámite',
+        href: getModuleUrl('nuevo-tramite', toUrl(nuevoTramite.index())),
+        icon: FilePlusCorner,
+    },
+    {
+        title: 'Estado de trámite',
+        href: getModuleUrl('estado-tramite', toUrl(estadoTramite.index())),
+        icon: GitCommitVertical,
+    },
+    {
+        title: 'Autorizar',
+        href: getModuleUrl('autorizar', toUrl(autorizar.index())),
+        icon: Handshake,
+    },
+]);
 
 const rightNavItems: NavItem[] = [
+    {
+        title: 'Repository',
+        href: 'https://github.com/laravel/vue-starter-kit',
+        icon: Search,
+    },
     {
         title: 'Repository',
         href: 'https://github.com/laravel/vue-starter-kit',
         icon: Folder,
     },
     {
-        title: 'Documentation',
+        title: 'Documentación',
         href: 'https://laravel.com/docs/starter-kits#vue',
         icon: BookOpen,
     },
@@ -76,9 +105,9 @@ const rightNavItems: NavItem[] = [
 </script>
 
 <template>
-    <div>
-        <div class="border-b border-sidebar-border/80">
-            <div class="mx-auto flex h-16 items-center px-4 md:max-w-7xl">
+    <div class="w-full bg-tfja-blue-nav text-white shadow-xs">
+        <div class="border-b border-tfja-blue-dark">
+            <div class="relative mx-auto flex h-16 items-center justify-between px-4 md:max-w-7xl">
                 <!-- Mobile Menu -->
                 <div class="lg:hidden">
                     <Sheet>
@@ -86,19 +115,19 @@ const rightNavItems: NavItem[] = [
                             <Button
                                 variant="ghost"
                                 size="icon"
-                                class="mr-2 h-9 w-9"
+                                class="mr-2 h-9 w-9 text-white hover:bg-tfja-blue-hover hover:text-white"
                             >
                                 <Menu class="h-5 w-5" />
                             </Button>
                         </SheetTrigger>
-                        <SheetContent side="left" class="w-[300px] p-6">
+                        <SheetContent side="left" class="w-75 p-6">
                             <SheetTitle class="sr-only"
                                 >Navigation menu</SheetTitle
                             >
                             <SheetHeader class="flex justify-start text-left">
-                                <AppLogoIcon
+                                <!-- <AppLogoIcon
                                     class="size-6 fill-current text-black dark:text-white"
-                                />
+                                /> -->
                             </SheetHeader>
                             <div
                                 class="flex h-full flex-1 flex-col justify-between space-y-4 py-6"
@@ -146,13 +175,26 @@ const rightNavItems: NavItem[] = [
                     </Sheet>
                 </div>
 
-                <Link :href="dashboard()" class="flex items-center gap-x-2">
-                    <AppLogo />
-                </Link>
+                
+<TooltipProvider :delay-duration="200">
+    <Tooltip>
+        <TooltipTrigger :as-child="true">
+            <Link
+                :href="dashboard()"
+                class="group flex items-center cursor-pointer select-none focus:outline-none"
+            >
+                <AppLogo />
+            </Link>
+        </TooltipTrigger>
+        <TooltipContent side="bottom">
+            <p>Menú principal</p>
+        </TooltipContent>
+    </Tooltip>
+</TooltipProvider>
 
                 <!-- Desktop Menu -->
-                <div class="hidden h-full lg:flex lg:flex-1">
-                    <NavigationMenu class="ml-10 flex h-full items-stretch">
+                <div class="hidden h-full lg:flex lg:absolute lg:left-1/2 lg:top-0 lg:-translate-x-1/2">
+                    <NavigationMenu class="flex h-full items-stretch">
                         <NavigationMenuList
                             class="flex h-full items-stretch space-x-2"
                         >
@@ -168,20 +210,20 @@ const rightNavItems: NavItem[] = [
                                             item.href,
                                             activeItemStyles,
                                         ),
-                                        'h-9 cursor-pointer px-3',
+                                        'h-9 cursor-pointer px-3 text-xs uppercase tracking-wide text-slate-100 bg-transparent hover:bg-tfja-bronce-hover hover:text-white focus:bg-transparent focus:text-white focus-visible:outline-none focus-visible:ring-0 focus-visible:ring-offset-0',
                                     ]"
                                     :href="item.href"
                                 >
                                     <component
                                         v-if="item.icon"
                                         :is="item.icon"
-                                        class="mr-2 h-4 w-4"
+                                        class="mr-2 h-4 w-4 shrink-0 text-slate-100"
                                     />
                                     {{ item.title }}
                                 </Link>
                                 <div
-                                    v-if="isCurrentUrl(item.href)"
-                                    class="absolute bottom-0 left-0 h-0.5 w-full translate-y-px bg-black dark:bg-white"
+                                    v-if="isCurrentOrParentUrl(item.href)"
+                                    class="absolute bottom-0 left-0 h-0.5 w-full bg-tfja-bronze"
                                 ></div>
                             </NavigationMenuItem>
                         </NavigationMenuList>
@@ -190,7 +232,7 @@ const rightNavItems: NavItem[] = [
 
                 <div class="ml-auto flex items-center space-x-2">
                     <div class="relative flex items-center space-x-1">
-                        <Button
+                        <!-- <Button
                             variant="ghost"
                             size="icon"
                             class="group h-9 w-9 cursor-pointer"
@@ -198,7 +240,7 @@ const rightNavItems: NavItem[] = [
                             <Search
                                 class="size-5 opacity-80 group-hover:opacity-100"
                             />
-                        </Button>
+                        </Button> -->
 
                         <div class="hidden space-x-1 lg:flex">
                             <template
@@ -212,7 +254,7 @@ const rightNavItems: NavItem[] = [
                                                 variant="ghost"
                                                 size="icon"
                                                 as-child
-                                                class="group h-9 w-9 cursor-pointer"
+                                                class="group h-9 w-9 text-slate-200 hover:bg-tfja-blue-hover hover:text-white cursor-pointer"
                                             >
                                                 <a
                                                     :href="toUrl(item.href)"
@@ -239,32 +281,31 @@ const rightNavItems: NavItem[] = [
                     </div>
 
                     <DropdownMenu>
-                        <DropdownMenuTrigger :as-child="true">
-                            <Button
-                                variant="ghost"
-                                size="icon"
-                                class="relative size-10 w-auto rounded-full p-1 focus-within:ring-2 focus-within:ring-primary"
-                            >
-                                <Avatar
-                                    class="size-8 overflow-hidden rounded-full"
-                                >
-                                    <AvatarImage
-                                        v-if="auth.user.avatar"
-                                        :src="auth.user.avatar"
-                                        :alt="auth.user.name"
-                                    />
-                                    <AvatarFallback
-                                        class="rounded-lg bg-neutral-200 font-semibold text-black dark:bg-neutral-700 dark:text-white"
-                                    >
-                                        {{ getInitials(auth.user?.name) }}
-                                    </AvatarFallback>
-                                </Avatar>
-                            </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end" class="w-56">
-                            <UserMenuContent :user="auth.user" />
-                        </DropdownMenuContent>
-                    </DropdownMenu>
+    <DropdownMenuTrigger :as-child="true">
+        <Button
+            variant="ghost"
+            size="icon"
+            class="group relative size-8 rounded-full p-0 hover:bg-transparent focus-visible:ring-2 focus-visible:ring-tfja-bronze cursor-pointer"
+        >
+            <Avatar class="size-8 overflow-hidden rounded-full">
+                <AvatarImage
+                    v-if="auth.user?.avatar"
+                    :src="auth.user.avatar"
+                    :alt="auth.user?.name"
+                />
+                <AvatarFallback
+                    class="rounded-full bg-tfja-bronze font-bold text-xs text-white transition-colors duration-200 group-hover:bg-tfja-bg group-hover:text-tfja-blue"
+                >
+                    {{ getInitials(auth.user?.name) }}
+                </AvatarFallback>
+            </Avatar>
+        </Button>
+    </DropdownMenuTrigger>
+
+    <DropdownMenuContent align="end" class="w-56">
+        <UserMenuContent :user="auth.user" />
+    </DropdownMenuContent>
+</DropdownMenu>
                 </div>
             </div>
         </div>
