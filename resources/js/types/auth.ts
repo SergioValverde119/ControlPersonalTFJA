@@ -12,6 +12,11 @@ export type User = {
 
 export type Auth = {
     user: User;
+
+    can: {
+        manageUsers: boolean;
+        [key: string]: boolean;
+    };
 };
 
 export type Passkey = {

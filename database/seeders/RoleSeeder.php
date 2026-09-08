@@ -36,7 +36,7 @@ class RoleSeeder extends Seeder
             ],
             [
                 'clave' => 'RECURSOS_HUMANOS',
-                'nombre' => 'Recursos Humanos / Nóminas',
+                'nombre' => 'Recursos Humanos',
                 'descripcion' => 'Validación normativa central, aplicación de bajas, licencias e incidencias.',
             ],
         ];

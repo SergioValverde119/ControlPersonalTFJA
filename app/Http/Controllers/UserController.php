@@ -59,7 +59,7 @@ class UserController extends Controller
                 $q->whereHas('roles', fn (Builder $sub) => $sub->where('roles.id', $request->integer('role_id')));
             })
             ->orderBy('name')
-            ->paginate(12)
+            ->paginate(10)
             ->withQueryString();
 
         return Inertia::render('Usuarios/Index', [

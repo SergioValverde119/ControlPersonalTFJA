@@ -2,7 +2,7 @@
 <script setup lang="ts">
 import { Link, usePage } from '@inertiajs/vue3';
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
-import { BookOpen, Folder, LayoutGrid, Menu, Search, CheckCheck, Handshake, GitCommitVertical, FilePlusCorner } from '@lucide/vue';
+import { BookOpen, Folder, LayoutGrid, Menu, Search, CheckCheck, Handshake, GitCommitVertical, FilePlusCorner, UserRound } from '@lucide/vue';
 import { computed } from 'vue';
 import AppLogo from '@/components/AppLogo.vue';
 //import AppLogoIcon from '@/components/AppLogoIcon.vue';
@@ -42,6 +42,7 @@ import { dashboard } from '@/routes';
 import  nuevoTramite  from '@/routes/nuevo-tramite';
 import estadoTramite from '@/routes/estado-tramite';
 import autorizar from '@/routes/autorizar';
+import usuarios from '@/routes/usuarios'
 import type { BreadcrumbItem, NavItem } from '@/types';
 
 type Props = {
@@ -83,6 +84,17 @@ const mainNavItems = computed<NavItem[]>(() => [
         href: getModuleUrl('autorizar', toUrl(autorizar.index())),
         icon: Handshake,
     },
+    ...(auth.value?.can?.manageUsers
+        ?[
+            {
+                title: 'Usuarios',
+                href: toUrl(usuarios.index()),
+                icon: UserRound,
+            },
+        ]
+        : []),
+    
+    
 ]);
 
 const rightNavItems: NavItem[] = [
@@ -192,8 +204,8 @@ const rightNavItems: NavItem[] = [
     </Tooltip>
 </TooltipProvider>
 
-                <!-- Desktop Menu -->
-                <div class="hidden h-full lg:flex lg:absolute lg:left-1/2 lg:top-0 lg:-translate-x-1/2">
+                <!-- Desktop Menu lg:absolute lg:left-1/2 lg:top-0 lg:-translate-x-1/2-->
+                <div class="hidden h-full lg:flex lg:flex-1 lg:items-center lg:justify-center lg:px-4 min-w-0">
                     <NavigationMenu class="flex h-full items-stretch">
                         <NavigationMenuList
                             class="flex h-full items-stretch space-x-2"
@@ -230,7 +242,7 @@ const rightNavItems: NavItem[] = [
                     </NavigationMenu>
                 </div>
 
-                <div class="ml-auto flex items-center space-x-2">
+                <div class="flex items-center space-x-2 shrink-0">
                     <div class="relative flex items-center space-x-1">
                         <!-- <Button
                             variant="ghost"
