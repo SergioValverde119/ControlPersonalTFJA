@@ -35,8 +35,8 @@ use Laravel\Fortify\TwoFactorAuthenticatable;
  * @property Carbon|null $updated_at
  */
 #[Fillable([
-    'name', 
-    'email', 
+    'name',
+    'email',
     'password',
     'region_id',
     'sala_id',

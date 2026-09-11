@@ -12,15 +12,15 @@ return new class extends Migration
     public function up(): void
     {
         Schema::create('salas', function (Blueprint $table) {
-    $table->id();
-    $table->foreignId('region_id')->constrained('regiones')->cascadeOnDelete();
-    $table->string('clave', 30)->unique();            // Ej: 'SRM_01'
-    $table->string('nombre', 200);                    // Ej: 'Primera Sala Regional Metropolitana'
-    $table->string('tipo', 50)->default('ORDINARIA'); // ORDINARIA, ESPECIALIZADA, AUXILIAR
-    $table->boolean('activo')->default(true)->index();
-    $table->timestamps();
-});
-        
+            $table->id();
+            $table->foreignId('region_id')->constrained('regiones')->cascadeOnDelete();
+            $table->string('clave', 30)->unique();            // Ej: 'SRM_01'
+            $table->string('nombre', 200);                    // Ej: 'Primera Sala Regional Metropolitana'
+            $table->string('tipo', 50)->default('ORDINARIA'); // ORDINARIA, ESPECIALIZADA, AUXILIAR
+            $table->boolean('activo')->default(true)->index();
+            $table->timestamps();
+        });
+
     }
 
     /**

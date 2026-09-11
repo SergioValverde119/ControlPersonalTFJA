@@ -45,15 +45,15 @@ class UserPolicy
         }
 
         if ($user->hasRole('MAGISTRADO_PRESIDENTE')) {
-            return !is_null($user->sala_id) && $user->sala_id === $target->sala_id;
+            return ! is_null($user->sala_id) && $user->sala_id === $target->sala_id;
         }
 
         if ($user->hasRole('MAGISTRADO_PONENTE')) {
-            return !is_null($user->area_id) && $user->area_id === $target->area_id;
+            return ! is_null($user->area_id) && $user->area_id === $target->area_id;
         }
 
         if ($user->hasRole('MAGISTRADO_VISITADOR')) {
-            return !is_null($target->sala_id) && $user->salasVisitadas->contains('id', $target->sala_id);
+            return ! is_null($target->sala_id) && $user->salasVisitadas->contains('id', $target->sala_id);
         }
 
         return false;

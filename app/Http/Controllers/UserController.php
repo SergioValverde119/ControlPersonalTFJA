@@ -4,7 +4,6 @@ namespace App\Http\Controllers;
 
 use App\Http\Requests\StoreUserRequest;
 use App\Http\Requests\UpdateUserRequest;
-use App\Models\Area;
 use App\Models\Region;
 use App\Models\Role;
 use App\Models\Sala;
@@ -64,9 +63,9 @@ class UserController extends Controller
 
         return Inertia::render('Usuarios/Index', [
             'usuarios' => $usuarios,
-            'filtros'  => $request->only(['buscar', 'region_id', 'sala_id', 'area_id', 'role_id']),
+            'filtros' => $request->only(['buscar', 'region_id', 'sala_id', 'area_id', 'role_id']),
             'regiones' => fn () => Region::where('activo', true)->select('id', 'clave', 'nombre')->orderBy('nombre')->get(),
-            'roles'    => fn () => Role::where('activo', true)->select('id', 'clave', 'nombre')->orderBy('id')->get(),
+            'roles' => fn () => Role::where('activo', true)->select('id', 'clave', 'nombre')->orderBy('id')->get(),
         ]);
     }
 
@@ -77,13 +76,13 @@ class UserController extends Controller
     {
         DB::transaction(function () use ($request) {
             $user = User::create([
-                'name'      => $request->validated('name'),
-                'email'     => $request->validated('email'),
-                'password'  => Hash::make($request->validated('password')),
+                'name' => $request->validated('name'),
+                'email' => $request->validated('email'),
+                'password' => Hash::make($request->validated('password')),
                 'region_id' => $request->validated('region_id'),
-                'sala_id'   => $request->validated('sala_id'),
-                'area_id'   => $request->validated('area_id'),
-                'activo'    => $request->boolean('activo', true),
+                'sala_id' => $request->validated('sala_id'),
+                'area_id' => $request->validated('area_id'),
+                'activo' => $request->boolean('activo', true),
             ]);
 
             $user->roles()->sync($request->validated('roles'));
@@ -93,40 +92,40 @@ class UserController extends Controller
     }
 
     /**
- * Actualizar datos del servidor público o cambio de contraseña según el rol.
- */
-public function update(UpdateUserRequest $request, User $usuario): RedirectResponse
-{
-    // Si es Magistrado: solo actualiza la contraseña de su subordinado
-    if (! $request->user()->hasRole('ADMIN_DGTIC')) {
-        $usuario->update([
-            'password' => Hash::make($request->validated('password')),
-        ]);
+     * Actualizar datos del servidor público o cambio de contraseña según el rol.
+     */
+    public function update(UpdateUserRequest $request, User $usuario): RedirectResponse
+    {
+        // Si es Magistrado: solo actualiza la contraseña de su subordinado
+        if (! $request->user()->hasRole('ADMIN_DGTIC')) {
+            $usuario->update([
+                'password' => Hash::make($request->validated('password')),
+            ]);
 
-        return to_route('usuarios.index')->with('success', 'Contraseña actualizada correctamente.');
-    }
-
-    // Si es ADMIN_DGTIC: actualiza expediente completo, roles y adscripción
-    DB::transaction(function () use ($request, $usuario) {
-        $datos = [
-            'name'      => $request->validated('name'),
-            'email'     => $request->validated('email'),
-            'region_id' => $request->validated('region_id'),
-            'sala_id'   => $request->validated('sala_id'),
-            'area_id'   => $request->validated('area_id'),
-            'activo'    => $request->boolean('activo', $usuario->activo),
-        ];
-
-        if ($request->filled('password')) {
-            $datos['password'] = Hash::make($request->validated('password'));
+            return to_route('usuarios.index')->with('success', 'Contraseña actualizada correctamente.');
         }
 
-        $usuario->update($datos);
-        $usuario->roles()->sync($request->validated('roles'));
-    });
+        // Si es ADMIN_DGTIC: actualiza expediente completo, roles y adscripción
+        DB::transaction(function () use ($request, $usuario) {
+            $datos = [
+                'name' => $request->validated('name'),
+                'email' => $request->validated('email'),
+                'region_id' => $request->validated('region_id'),
+                'sala_id' => $request->validated('sala_id'),
+                'area_id' => $request->validated('area_id'),
+                'activo' => $request->boolean('activo', $usuario->activo),
+            ];
 
-    return to_route('usuarios.index')->with('success', 'Expediente institucional actualizado correctamente.');
-}
+            if ($request->filled('password')) {
+                $datos['password'] = Hash::make($request->validated('password'));
+            }
+
+            $usuario->update($datos);
+            $usuario->roles()->sync($request->validated('roles'));
+        });
+
+        return to_route('usuarios.index')->with('success', 'Expediente institucional actualizado correctamente.');
+    }
 
     /**
      * Baja lógica institucional del personal en el sistema.

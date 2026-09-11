@@ -7,7 +7,8 @@ import {
     Plus,
     RotateCcw,
     Search,
-    Trash2,
+    UserCheck,
+    UserX,
 } from '@lucide/vue';
 import { ref } from 'vue';
 import { Badge } from '@/components/ui/badge';
@@ -50,9 +51,9 @@ const roleId = ref(props.filtros.role_id ? String(props.filtros.role_id) : 'TODO
 const regionId = ref(props.filtros.region_id ? String(props.filtros.region_id) : 'TODOS');
 
 const modalFormOpen = ref(false);
-const modalDeleteOpen = ref(false);
+const modalDeactivateOpen = ref(false);
 const usuarioSeleccionado = ref<Usuario | null>(null);
-const isDeleting = ref(false);
+const isDeactivating = ref(false);
 
 const formatearEtiqueta = (label: string) => {
     if (label.includes('&laquo;') || label.toLowerCase().includes('previous') || label.toLowerCase().includes('anterior')) {
@@ -103,27 +104,47 @@ const abrirEditar = (u: Usuario) => {
     modalFormOpen.value = true;
 };
 
-const abrirEliminar = (u: Usuario) => {
+const abrirDesactivar = (u: Usuario) => {
     usuarioSeleccionado.value = u;
-    modalDeleteOpen.value = true;
+    modalDeactivateOpen.value = true;
 };
 
-const confirmarBaja = () => {
+const reactivarServidor = (u: Usuario) => {
+    router.put(
+        toUrl(usuariosRoutes.update(u.id)),
+        {
+            name: u.name,
+            email: u.email,
+            password: null,
+            roles: u.roles ? u.roles.map((r) => r.id) : [],
+            region_id: u.region_id ?? null,
+            sala_id: u.sala_id ?? null,
+            area_id: u.area_id ?? null,
+            activo: true,
+        },
+        {
+            preserveScroll: true,
+            preserveState: true,
+        },
+    );
+};
+
+const confirmarDesactivacion = () => {
     if (!usuarioSeleccionado.value) {
         return;
     }
 
-    isDeleting.value = true;
+    isDeactivating.value = true;
 
     router.delete(toUrl(usuariosRoutes.destroy(usuarioSeleccionado.value.id)), {
         preserveScroll: true,
         onSuccess: () => {
-            modalDeleteOpen.value = false;
-            isDeleting.value = false;
+            modalDeactivateOpen.value = false;
+            isDeactivating.value = false;
             usuarioSeleccionado.value = null;
         },
         onError: () => {
-            isDeleting.value = false;
+            isDeactivating.value = false;
         },
     });
 };
@@ -153,7 +174,6 @@ const confirmarBaja = () => {
             </CardHeader>
 
             <CardContent class="pt-4 space-y-4">
-                <!-- Barra de Filtros -->
                 <div class="p-3 bg-slate-50 border border-slate-200 grid grid-cols-1 sm:grid-cols-4 gap-3 items-end">
                     <div class="space-y-1.5 sm:col-span-2 text-xs">
                         <Label for="filtro-buscar" class="font-bold text-slate-700 uppercase">
@@ -208,7 +228,6 @@ const confirmarBaja = () => {
                     </div>
                 </div>
 
-                <!-- Tabla de Datos -->
                 <div class="border border-slate-300 overflow-x-auto">
                     <table class="w-full text-xs text-left border-collapse">
                         <thead>
@@ -282,11 +301,21 @@ const confirmarBaja = () => {
                                             <DropdownMenuSeparator />
 
                                             <DropdownMenuItem
+                                                v-if="u.activo"
                                                 variant="destructive"
-                                                @select="abrirEliminar(u)"
+                                                @select="abrirDesactivar(u)"
                                             >
-                                                <Trash2 class="mr-2 size-3.5" />
-                                                <span>Eliminar Usuario</span>
+                                                <UserX class="mr-2 size-3.5" />
+                                                <span>Desactivar Servidor</span>
+                                            </DropdownMenuItem>
+
+                                            <DropdownMenuItem
+                                                v-else
+                                                class="text-emerald-700 hover:text-emerald-800 focus:text-emerald-800 focus:bg-emerald-50"
+                                                @select="reactivarServidor(u)"
+                                            >
+                                                <UserCheck class="mr-2 size-3.5 text-emerald-600" />
+                                                <span>Reactivar Servidor</span>
                                             </DropdownMenuItem>
                                         </DropdownMenuContent>
                                     </DropdownMenu>
@@ -302,7 +331,6 @@ const confirmarBaja = () => {
                     </table>
                 </div>
 
-                <!-- Resumen y Controles de Paginación -->
                 <div class="flex flex-col sm:flex-row items-center justify-between gap-3 text-[11px] text-slate-500 pt-2">
                     <span>
                         Mostrando {{ props.usuarios.from ?? 0 }} a {{ props.usuarios.to ?? 0 }} de {{ props.usuarios.total }} registros
@@ -310,7 +338,6 @@ const confirmarBaja = () => {
 
                     <div v-if="props.usuarios.last_page > 1" class="flex flex-wrap items-center gap-1">
                         <template v-for="(link, index) in props.usuarios.links" :key="index">
-                            <!-- Enlace inactivo o deshabilitado -->
                             <Button
                                 v-if="!link.url"
                                 size="sm"
@@ -321,7 +348,6 @@ const confirmarBaja = () => {
                                 <span>{{ formatearEtiqueta(link.label) }}</span>
                             </Button>
 
-                            <!-- Enlace activo navegable -->
                             <Button
                                 v-else
                                 as-child
@@ -343,7 +369,6 @@ const confirmarBaja = () => {
             </CardContent>
         </Card>
 
-        <!-- Modales Compuestos -->
         <UserDialog
             v-model:open="modalFormOpen"
             :usuario="usuarioSeleccionado"
@@ -352,10 +377,10 @@ const confirmarBaja = () => {
         />
 
         <DeleteUserDialog
-            v-model:open="modalDeleteOpen"
+            v-model:open="modalDeactivateOpen"
             :usuario="usuarioSeleccionado"
-            :processing="isDeleting"
-            @confirm="confirmarBaja"
+            :processing="isDeactivating"
+            @confirm="confirmarDesactivacion"
         />
     </div>
 </template>

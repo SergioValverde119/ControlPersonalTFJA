@@ -1,5 +1,5 @@
-import { reactive } from 'vue';
 import { router } from '@inertiajs/vue3';
+import { reactive } from 'vue';
 
 /**
  * ESTADO COMPARTIDO (Singleton a nivel de módulo)

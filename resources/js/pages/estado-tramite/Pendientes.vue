@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { Head } from '@inertiajs/vue3';
 import Heading from '@/components/Heading.vue';
-import { Badge } from '@/components/ui/badge';
+//import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { pendientes } from '@/routes/estado-tramite';
 

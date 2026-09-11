@@ -25,13 +25,13 @@ class StoreUserRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'name'      => ['required', 'string', 'max:255'],
-            'email'     => ['required', 'string', 'email', 'max:255', 'unique:users,email'],
-            'password'  => ['required', 'string', 'min:8'],
-            'roles'     => ['required', 'array', 'min:1'],
-            'roles.*'   => ['exists:roles,id'],
+            'name' => ['required', 'string', 'max:255'],
+            'email' => ['required', 'string', 'email', 'max:255', 'unique:users,email'],
+            'password' => ['required', 'string', 'min:8'],
+            'roles' => ['required', 'array', 'min:1'],
+            'roles.*' => ['exists:roles,id'],
             'region_id' => ['nullable', 'exists:regiones,id'],
-            'sala_id'   => [
+            'sala_id' => [
                 'nullable',
                 Rule::exists('salas', 'id')->where(function ($query) {
                     if ($this->filled('region_id')) {
@@ -39,7 +39,7 @@ class StoreUserRequest extends FormRequest
                     }
                 }),
             ],
-            'area_id'   => [
+            'area_id' => [
                 'nullable',
                 Rule::exists('areas', 'id')->where(function ($query) {
                     if ($this->filled('sala_id')) {
@@ -47,7 +47,7 @@ class StoreUserRequest extends FormRequest
                     }
                 }),
             ],
-            'activo'    => ['boolean'],
+            'activo' => ['boolean'],
         ];
     }
 }

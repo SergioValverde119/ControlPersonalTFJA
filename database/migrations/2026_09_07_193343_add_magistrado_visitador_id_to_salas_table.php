@@ -10,20 +10,20 @@ return new class extends Migration
      * Run the migrations.
      */
     public function up(): void
-{
-    Schema::table('salas', function (Blueprint $table) {
-        $table->foreignId('magistrado_visitador_id')
-            ->nullable()
-            ->after('magistrado_visitador')
-            ->constrained('users')
-            ->nullOnDelete();
-    });
-}
+    {
+        Schema::table('salas', function (Blueprint $table) {
+            $table->foreignId('magistrado_visitador_id')
+                ->nullable()
+                ->after('magistrado_visitador')
+                ->constrained('users')
+                ->nullOnDelete();
+        });
+    }
 
-public function down(): void
-{
-    Schema::table('salas', function (Blueprint $table) {
-        $table->dropConstrainedForeignId('magistrado_visitador_id');
-    });
-}
+    public function down(): void
+    {
+        Schema::table('salas', function (Blueprint $table) {
+            $table->dropConstrainedForeignId('magistrado_visitador_id');
+        });
+    }
 };

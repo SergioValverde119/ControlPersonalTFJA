@@ -32,18 +32,18 @@ const emit = defineEmits<{
         :open="props.open"
         @update:open="(val) => emit('update:open', val)"
     >
-        <DialogContent class="sm:max-w-md border-t-4 border-t-red-600" :show-close-button="!props.processing">
+        <DialogContent class="sm:max-w-md border-t-4 border-t-amber-600" :show-close-button="!props.processing">
             <DialogHeader>
                 <div class="flex items-center gap-2">
-                    <AlertTriangle class="size-5 text-red-600" />
-                    <DialogTitle class="text-red-700">Confirmar Eliminación</DialogTitle>
+                    <AlertTriangle class="size-5 text-amber-600" />
+                    <DialogTitle class="text-amber-800">Confirmar Desactivación</DialogTitle>
                 </div>
                 <DialogDescription>
-                    Esta acción procederá con el borrado del usuario y revocará sus accesos al sistema institucional.
+                    Esta acción suspenderá el acceso del servidor público al sistema sin alterar su historial ni sus registros de auditoría.
                 </DialogDescription>
             </DialogHeader>
 
-            <div v-if="props.usuario" class="p-3 bg-red-50 border border-red-200 text-xs text-red-800 space-y-1">
+            <div v-if="props.usuario" class="p-3 bg-amber-50 border border-amber-200 text-xs text-amber-900 space-y-1">
                 <p><strong>Servidor Público:</strong> {{ props.usuario.name }}</p>
                 <p><strong>Correo Oficial:</strong> {{ props.usuario.email }}</p>
             </div>
@@ -66,7 +66,7 @@ const emit = defineEmits<{
                     :disabled="props.processing"
                     @click="emit('confirm')"
                 >
-                    {{ props.processing ? 'Eliminando...' : 'Confirmar Eliminación' }}
+                    {{ props.processing ? 'Desactivando...' : 'Confirmar Desactivación' }}
                 </Button>
             </DialogFooter>
         </DialogContent>

@@ -27,16 +27,16 @@ class UpdateUserRequest extends FormRequest
 
         // Reglas para ADMIN_DGTIC: Puede editar el expediente completo
         $usuario = $this->route('usuario');
-        $userId  = is_object($usuario) ? $usuario->id : $usuario;
+        $userId = is_object($usuario) ? $usuario->id : $usuario;
 
         return [
-            'name'      => ['required', 'string', 'max:255'],
-            'email'     => ['required', 'string', 'email', 'max:255', Rule::unique('users', 'email')->ignore($userId)],
-            'password'  => ['nullable', 'string', 'min:8'],
-            'roles'     => ['required', 'array', 'min:1'],
-            'roles.*'   => ['exists:roles,id'],
+            'name' => ['required', 'string', 'max:255'],
+            'email' => ['required', 'string', 'email', 'max:255', Rule::unique('users', 'email')->ignore($userId)],
+            'password' => ['nullable', 'string', 'min:8'],
+            'roles' => ['required', 'array', 'min:1'],
+            'roles.*' => ['exists:roles,id'],
             'region_id' => ['nullable', 'exists:regiones,id'],
-            'sala_id'   => [
+            'sala_id' => [
                 'nullable',
                 Rule::exists('salas', 'id')->where(function ($query) {
                     if ($this->filled('region_id')) {
@@ -44,7 +44,7 @@ class UpdateUserRequest extends FormRequest
                     }
                 }),
             ],
-            'area_id'   => [
+            'area_id' => [
                 'nullable',
                 Rule::exists('areas', 'id')->where(function ($query) {
                     if ($this->filled('sala_id')) {
@@ -52,7 +52,7 @@ class UpdateUserRequest extends FormRequest
                     }
                 }),
             ],
-            'activo'    => ['boolean'],
+            'activo' => ['boolean'],
         ];
     }
 }

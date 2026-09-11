@@ -18,10 +18,8 @@ class DatabaseSeeder extends Seeder
         $this->call([
             RoleSeeder::class,
 
-
-            
         ]);
-    
+
         // User::factory(10)->create();
 
         User::factory()->create([
@@ -29,6 +27,5 @@ class DatabaseSeeder extends Seeder
             'email' => 'test@example.com',
         ]);
 
-        
     }
 }

@@ -41,12 +41,12 @@ class Sala extends Model
     }
 
     public function magistradoVisitador(): BelongsTo
-{
-    return $this->belongsTo(User::class, 'magistrado_visitador_id');
-}
+    {
+        return $this->belongsTo(User::class, 'magistrado_visitador_id');
+    }
 
-public function users(): HasMany
-{
-    return $this->hasMany(User::class);
-}
+    public function users(): HasMany
+    {
+        return $this->hasMany(User::class);
+    }
 }
