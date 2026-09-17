@@ -28,16 +28,14 @@ class GeneradorCadenaFirmas
 
             $candidatos = [];
 
-            // 0. CANDADO DE VENIA (Si el servidor público ya está activo en otra área)
-            if ($tramite->persona?->es_empleado_activo) {
-                $unidadCedente = $this->resolverUnidadCedente($tramite);
+            // 0. CANDADO DE VENIA (Si el servidor público ya está activo en otra área cedente)
+            $unidadCedente = $this->resolverUnidadCedente($tramite);
 
-                if ($unidadCedente && $unidadCedente->id !== $unidadDestino->id) {
-                    $candidatos[] = [
-                        'etiqueta_rol' => 'VENIA_TITULAR_CEDENTE',
-                        'unidad'       => $unidadCedente,
-                    ];
-                }
+            if ($unidadCedente && $unidadCedente->id !== $unidadDestino->id) {
+                $candidatos[] = [
+                    'etiqueta_rol' => 'TITULAR_SUPERIOR',
+                    'unidad'       => $unidadCedente,
+                ];
             }
 
             // 1. AUTORIDAD INMEDIATA (Área Compartida vs Ordinaria)

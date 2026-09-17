@@ -1,9 +1,7 @@
 <?php
 
-
 namespace App\Http\Requests;
 
-use App\Actions\Workflow\ProcesarFirmaAction;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
@@ -11,27 +9,22 @@ class ProcesarFirmaRequest extends FormRequest
 {
     public function authorize(): bool
     {
-        // Se valida que la petición provenga de un usuario autenticado.
-        // La validación de si es exactamente el firmante en turno la resuelve la Action.
-        return auth()->check();
+        /** @var \App\Models\TramiteFirma $firma */
+        $firma = $this->route('firma');
+
+        // Solo el usuario asignado a la firma puede emitir la decisión
+        return $firma && $this->user()?->id === $firma->firmante_user_id;
     }
 
     public function rules(): array
     {
         return [
-            'decision' => [
-                'required',
-                'string',
-                Rule::in([
-                    ProcesarFirmaAction::DECISION_APROBAR,
-                    ProcesarFirmaAction::DECISION_DEVOLVER,
-                ]),
-            ],
-            'motivo' => [
-                'required_if:decision,' . ProcesarFirmaAction::DECISION_DEVOLVER,
+            'decision' => ['required', 'string', Rule::in(['AUTORIZADO', 'RECHAZADO'])],
+            'motivo'   => [
+                Rule::requiredIf(fn () => $this->input('decision') === 'RECHAZADO'),
                 'nullable',
                 'string',
-                'min:5',
+                'min:10',
                 'max:1000',
             ],
         ];
@@ -40,11 +33,10 @@ class ProcesarFirmaRequest extends FormRequest
     public function messages(): array
     {
         return [
-            'decision.required' => 'La decisión de la firma es obligatoria.',
-            'decision.in' => 'La decisión debe ser APROBADO o DEVUELTO_OBSERVADO.',
-            'motivo.required_if' => 'Es obligatorio detallar el motivo de la devolución u observación.',
-            'motivo.min' => 'El motivo debe contener al menos 5 caracteres.',
-            'motivo.max' => 'El motivo no puede exceder los 1000 caracteres.',
+            'decision.required' => 'Debe indicar si autoriza o rechaza el turno de firma.',
+            'decision.in'       => 'La decisión seleccionada no es válida.',
+            'motivo.required'   => 'Es obligatorio asentar el motivo o fundamento del rechazo.',
+            'motivo.min'        => 'El motivo del rechazo debe ser de al menos 10 caracteres.',
         ];
     }
 }

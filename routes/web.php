@@ -1,122 +1,101 @@
 <?php
 
+use App\Http\Controllers\DocumentoTramiteController;
+use App\Http\Controllers\EstadoTramiteController;
+use App\Http\Controllers\FirmaTramiteController;
+use App\Http\Controllers\NuevoTramiteController;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 
-// Route::inertia('/', 'Welcome')->name('home');
-
+/*
+|--------------------------------------------------------------------------
+| Rutas Públicas / Redirección Raíz
+|--------------------------------------------------------------------------
+*/
 Route::get('/', function () {
     return auth()->check()
         ? redirect()->route('dashboard')
         : redirect()->route('login');
 })->name('home');
 
+/*
+|--------------------------------------------------------------------------
+| Rutas Protegidas (Autenticación Requerida)
+|--------------------------------------------------------------------------
+*/
 Route::middleware(['auth', 'verified'])->group(function () {
+
+    // Tablero principal
     Route::inertia('dashboard', 'Dashboard')->name('dashboard');
-});
 
-// Route::get('/ui', function () {
-//     return Inertia::render('Dev/UIPlayground');
-// });
-
-Route::middleware(['auth'])->group(function () {
-    // Ruta base del módulo nombrada para Wayfinder
+    /*
+    |----------------------------------------------------------------------
+    | Módulo: Nuevo Trámite (Fase 1 - Solicitante)
+    |----------------------------------------------------------------------
+    */
     Route::redirect('/nuevo-tramite', '/nuevo-tramite/plazas')->name('nuevo-tramite.index');
 
     Route::prefix('nuevo-tramite')->name('nuevo-tramite.')->group(function () {
-        Route::get('/plazas', function () {
-            return Inertia::render('nuevo-tramite/PlazasDisponibles');
-        })->name('plazas');
+        Route::get('/plazas', [NuevoTramiteController::class, 'plazas'])->name('plazas');
+        Route::get('/alta', [NuevoTramiteController::class, 'alta'])->name('alta');
+        Route::post('/alta', [NuevoTramiteController::class, 'store'])->name('alta.store');
 
-        Route::get('/alta', function () {
-            return Inertia::render('nuevo-tramite/Alta');
-        })->name('alta');
+        Route::get('/baja', [NuevoTramiteController::class, 'baja'])->name('baja');
+        Route::get('/promocion', [NuevoTramiteController::class, 'promocion'])->name('promocion');
+        Route::get('/democion', [NuevoTramiteController::class, 'democion'])->name('democion');
+    });
 
-        Route::get('/baja', function () {
-            return Inertia::render('nuevo-tramite/Baja');
-        })->name('baja');
+    /*
+    |----------------------------------------------------------------------
+    | Módulo: Estado de Trámite (Consulta y Seguimiento Institucional)
+    |----------------------------------------------------------------------
+    */
+    Route::prefix('estado-tramite')->name('estado-tramite.')->group(function () {
+        Route::get('/', [EstadoTramiteController::class, 'index'])->name('index');
+        Route::get('/consulta', [EstadoTramiteController::class, 'index'])->name('consulta');
 
-        Route::get('/promocion', function () {
-            return Inertia::render('nuevo-tramite/Promocion');
-        })->name('promocion');
+        Route::get('/pendientes', fn () => Inertia::render('estado-tramite/Pendientes'))->name('pendientes');
+        Route::get('/rechazados', fn () => Inertia::render('estado-tramite/Rechazados'))->name('rechazados');
+        Route::get('/historico', fn () => Inertia::render('estado-tramite/Historico'))->name('historico');
 
-        Route::get('/democion', function () {
-            return Inertia::render('nuevo-tramite/Democion');
-        })->name('democion');
+        // Expediente individual
+        Route::get('/{tramite}', [EstadoTramiteController::class, 'show'])->name('show');
+    });
+
+    /*
+    |----------------------------------------------------------------------
+    | Módulo: Autorizar (Vistas de Bandejas para AppHeader y Navegación)
+    |----------------------------------------------------------------------
+    */
+    Route::redirect('/autorizar', '/autorizar/pendientes-vobo')->name('autorizar.index');
+
+    Route::prefix('autorizar')->name('autorizar.')->group(function () {
+        Route::get('/pendientes-vobo', fn () => Inertia::render('autorizar/PendientesVoBo'))->name('pendientes-vobo');
+        Route::get('/por-autorizar', fn () => Inertia::render('autorizar/PorAutorizar'))->name('por-autorizar');
+        Route::get('/devueltos', fn () => Inertia::render('autorizar/Devueltos'))->name('devueltos');
+        Route::get('/historial-firma', fn () => Inertia::render('autorizar/HistorialFirma'))->name('historial-firma');
+    });
+
+    /*
+    |----------------------------------------------------------------------
+    | Módulo: Firmas (Lógica y Transición de Estados del Circuito)
+    |----------------------------------------------------------------------
+    */
+    Route::prefix('firmas')->name('firmas.')->group(function () {
+        Route::get('/pendientes', [FirmaTramiteController::class, 'index'])->name('pendientes');
+        Route::put('/{firma}', [FirmaTramiteController::class, 'update'])->name('update');
+    });
+
+    /*
+    |----------------------------------------------------------------------
+    | Módulo: Expediente Transaccional de Documentos (PDF Seguro)
+    |----------------------------------------------------------------------
+    */
+    Route::prefix('documentos-tramite')->name('documentos-tramite.')->group(function () {
+        Route::get('/{documento}', [DocumentoTramiteController::class, 'show'])->name('show');
+        Route::get('/{documento}/descargar', [DocumentoTramiteController::class, 'download'])->name('download');
     });
 });
-
-Route::middleware(['auth'])->prefix('estado-tramite')->name('estado-tramite.')->group(function () {
-    // Redirección raíz del módulo a la consulta general
-    Route::get('/', function () {
-        return redirect()->route('estado-tramite.consulta');
-    })->name('index');
-
-    // 1. Consulta general de folios
-    Route::get('/consulta', function () {
-        return Inertia::render('estado-tramite/ConsultaGeneral');
-    })->name('consulta');
-
-    // 2. Trámites pendientes o en proceso
-    Route::get('/pendientes', function () {
-        return Inertia::render('estado-tramite/Pendientes');
-    })->name('pendientes');
-
-    // 3. Trámites observados o rechazados
-    Route::get('/rechazados', function () {
-        return Inertia::render('estado-tramite/Rechazados');
-    })->name('rechazados');
-
-    // 4. Histórico general
-    Route::get('/historico', function () {
-        return Inertia::render('estado-tramite/Historico');
-    })->name('historico');
-});
-
-Route::middleware(['auth'])->prefix('autorizar')->name('autorizar.')->group(function () {
-    // Redirección raíz del módulo a la bandeja de pendientes de Vo.Bo.
-    Route::get('/', function () {
-        return redirect()->route('autorizar.pendientes-vobo');
-    })->name('index');
-
-    // 1. Pendientes de visto bueno
-    Route::get('/pendientes-vobo', function () {
-        return Inertia::render('autorizar/PendientesVoBo');
-    })->name('pendientes-vobo');
-
-    // 2. Trámites listos para autorización definitiva
-    Route::get('/por-autorizar', function () {
-        return Inertia::render('autorizar/PorAutorizar');
-    })->name('por-autorizar');
-
-    // 3. Devoluciones o rechazos de firma
-    Route::get('/devueltos', function () {
-        return Inertia::render('autorizar/Devueltos');
-    })->name('devueltos');
-
-    // 4. Historial de folios firmados/autorizados
-    Route::get('/historial-firma', function () {
-        return Inertia::render('autorizar/HistorialFirma');
-    })->name('historial-firma');
-});
-
-
-Route::middleware(['auth'])->prefix('autorizar')->name('autorizar.')->group(function () {
-    Route::get('/', function () {
-        return redirect()->route('autorizar.pendientes-vobo');
-    })->name('index');
-
-    Route::get('/pendientes-vobo', [AutorizacionController::class, 'pendientesVoBo'])->name('pendientes-vobo');
-    Route::get('/por-autorizar', [AutorizacionController::class, 'porAutorizar'])->name('por-autorizar');
-    Route::get('/devueltos', [AutorizacionController::class, 'devueltos'])->name('devueltos');
-    Route::get('/historial-firma', [AutorizacionController::class, 'historialFirma'])->name('historial-firma');
-
-    // Acción de firma / devolución
-    Route::post('/firmas/{firma}/procesar', [AutorizacionController::class, 'procesarFirma'])->name('procesar');
-});
-
-
-
 
 require __DIR__.'/settings.php';
 require __DIR__.'/usuarios.php';
