@@ -1,18 +1,19 @@
 <?php
 
+// app/Models/Puesto.php
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
-class Role extends Model
+class Puesto extends Model
 {
-    protected $table = 'roles';
+    protected $table = 'puestos';
 
     protected $fillable = [
         'clave',
         'nombre',
-        'descripcion',
+        'nivel_tabular',
         'activo',
     ];
 
@@ -23,8 +24,8 @@ class Role extends Model
         ];
     }
 
-    public function users(): BelongsToMany
+    public function plazas(): HasMany
     {
-        return $this->belongsToMany(User::class)->withTimestamps();
+        return $this->hasMany(Plaza::class);
     }
 }

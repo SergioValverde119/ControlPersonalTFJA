@@ -16,6 +16,8 @@ use Illuminate\Support\Carbon;
 use Laravel\Fortify\Contracts\PasskeyUser;
 use Laravel\Fortify\PasskeyAuthenticatable;
 use Laravel\Fortify\TwoFactorAuthenticatable;
+use App\Models\Role;
+
 
 /**
  * @property int $id
@@ -23,9 +25,6 @@ use Laravel\Fortify\TwoFactorAuthenticatable;
  * @property string $email
  * @property Carbon|null $email_verified_at
  * @property string $password
- * @property int|null $region_id
- * @property int|null $sala_id
- * @property int|null $area_id
  * @property bool $activo
  * @property string|null $two_factor_secret
  * @property string|null $two_factor_recovery_codes
@@ -38,9 +37,7 @@ use Laravel\Fortify\TwoFactorAuthenticatable;
     'name',
     'email',
     'password',
-    'region_id',
-    'sala_id',
-    'area_id',
+    'persona_id',
     'activo',
 ])]
 #[Hidden(['password', 'two_factor_secret', 'two_factor_recovery_codes', 'remember_token'])]
@@ -75,32 +72,42 @@ class User extends Authenticatable implements PasskeyUser
         return $this->roles->pluck('clave')->intersect($claves)->isNotEmpty();
     }
 
+    public function hasAnyRole(array|string ...$claves): bool
+    {
+        $roles = is_array($claves[0] ?? null) ? $claves[0] : $claves;
+
+        return $this->roles->pluck('clave')->intersect($roles)->isNotEmpty();
+    }
+
     /*
     |--------------------------------------------------------------------------
     | Relaciones de Adscripción Territorial
     |--------------------------------------------------------------------------
     */
 
-    public function region(): BelongsTo
+    // Relación con la identidad civil perenne
+    public function persona()
     {
-        return $this->belongsTo(Region::class);
+        return $this->belongsTo(Persona::class);
     }
 
-    public function sala(): BelongsTo
+    // Titularidades o encargadurías que ejerce en el grafo organizacional
+    public function titularidades()
     {
-        return $this->belongsTo(Sala::class);
+        return $this->hasMany(Titularidad::class);
     }
 
-    public function area(): BelongsTo
+    // Titularidad activa actual
+    public function titularidadActiva()
     {
-        return $this->belongsTo(Area::class);
+        return $this->hasOne(Titularidad::class)->where('activo', true);
     }
 
-    /**
-     * Salas bajo supervisión si el usuario ejerce como Magistrado Visitador.
-     */
-    public function salasVisitadas(): HasMany
+    // Firmas pendientes asignadas a este usuario
+    public function firmasPendientes()
     {
-        return $this->hasMany(Sala::class, 'magistrado_visitador_id');
+        return $this->hasMany(TramiteFirma::class, 'firmante_user_id')
+                    ->where('estatus', 'PENDIENTE');
     }
+
 }

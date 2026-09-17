@@ -2,175 +2,241 @@
 
 namespace App\Http\Controllers;
 
-use App\Http\Requests\StoreUserRequest;
-use App\Http\Requests\UpdateUserRequest;
-use App\Models\Region;
+use App\Models\Persona;
 use App\Models\Role;
-use App\Models\Sala;
+use App\Models\Titularidad;
+use App\Models\UnidadOrganizacional;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Builder;
-use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Validation\Rule;
+use Illuminate\Validation\Rules\Password;
 use Inertia\Inertia;
 use Inertia\Response;
 
 class UserController extends Controller
 {
-    /**
-     * Listado general con paginación, filtros institucionales y control territorial.
-     */
     public function index(Request $request): Response
     {
         Gate::authorize('viewAny', User::class);
 
         $currentUser = $request->user();
+        $unidadPropia = $currentUser->titularidadActiva?->unidad;
 
-        $usuarios = User::query()
-            ->with(['roles', 'region', 'sala', 'area'])
-            // Restricción territorial por rol institucional
-            ->when($currentUser->hasRole('MAGISTRADO_PRESIDENTE'), function (Builder $query) use ($currentUser) {
-                $query->where('sala_id', $currentUser->sala_id);
-            })
-            ->when($currentUser->hasRole('MAGISTRADO_PONENTE'), function (Builder $query) use ($currentUser) {
-                $query->where('area_id', $currentUser->area_id);
-            })
-            ->when($currentUser->hasRole('MAGISTRADO_VISITADOR'), function (Builder $query) use ($currentUser) {
-                $salasAsignadas = $currentUser->salasVisitadas()->pluck('salas.id');
-                $query->whereIn('sala_id', $salasAsignadas);
-            })
-            // Filtro por término de búsqueda (nombre o correo)
-            ->when($request->filled('buscar'), function (Builder $query) use ($request) {
+        $query = User::query()
+            ->with([
+                'persona:id,curp,rfc',
+                'roles:id,clave,nombre',
+                'titularidadActiva.unidad.tipo:id,clave,nombre',
+            ]);
+
+        // Restricción territorial por jerarquía de grafo
+        if (! $currentUser->hasRole('ADMIN_DGTIC') && $unidadPropia) {
+            $query->whereHas('titularidades', function (Builder $t) use ($unidadPropia) {
+                $t->where('activo', true)
+                  ->whereHas('unidad', fn (Builder $u) => $u->where('path', 'like', "{$unidadPropia->path}%"));
+            });
+        }
+
+        // Filtros
+        $usuarios = $query
+            ->when($request->filled('buscar'), function (Builder $q) use ($request) {
                 $termino = trim($request->string('buscar'));
-                $query->where(function (Builder $subQuery) use ($termino) {
-                    $subQuery->where('name', 'like', "%{$termino}%")
-                        ->orWhere('email', 'like', "%{$termino}%");
+                $q->where(function (Builder $sub) use ($termino) {
+                    $sub->where('name', 'like', "%{$termino}%")
+                        ->orWhere('email', 'like', "%{$termino}%")
+                        ->orWhereHas('persona', fn ($p) => $p->where('curp', 'like', "%{$termino}%"));
                 });
             })
-            // Filtros selectivos de estructura
-            ->when($request->filled('region_id'), fn (Builder $q) => $q->where('region_id', $request->integer('region_id')))
-            ->when($request->filled('sala_id'), fn (Builder $q) => $q->where('sala_id', $request->integer('sala_id')))
-            ->when($request->filled('area_id'), fn (Builder $q) => $q->where('area_id', $request->integer('area_id')))
+            ->when($request->filled('unidad_id'), function (Builder $q) use ($request) {
+                $unidadId = $request->integer('unidad_id');
+                $q->whereHas('titularidades', function (Builder $t) use ($unidadId) {
+                    $t->where('activo', true)
+                      ->whereHas('unidad', fn ($u) => $u->where('path', 'like', "%/{$unidadId}/%")->orWhere('id', $unidadId));
+                });
+            })
             ->when($request->filled('role_id'), function (Builder $q) use ($request) {
-                $q->whereHas('roles', fn (Builder $sub) => $sub->where('roles.id', $request->integer('role_id')));
+                $q->whereHas('roles', fn ($r) => $r->where('roles.id', $request->integer('role_id')));
             })
             ->orderBy('name')
-            ->paginate(10)
+            ->paginate(15)
             ->withQueryString();
 
         return Inertia::render('Usuarios/Index', [
             'usuarios' => $usuarios,
-            'filtros' => $request->only(['buscar', 'region_id', 'sala_id', 'area_id', 'role_id']),
-            'regiones' => fn () => Region::where('activo', true)->select('id', 'clave', 'nombre')->orderBy('nombre')->get(),
-            'roles' => fn () => Role::where('activo', true)->select('id', 'clave', 'nombre')->orderBy('id')->get(),
+            'filtros' => $request->only(['buscar', 'unidad_id', 'role_id']),
+            'roles_disponibles' => fn () => Role::where('activo', true)->get(['id', 'clave', 'nombre']),
+            'unidades_arbol' => fn () => $this->obtenerArbolUnidades(),
         ]);
     }
 
-    /**
-     * Registro y asignación territorial del servidor público.
-     */
-    public function store(StoreUserRequest $request): RedirectResponse
+    public function store(Request $request): RedirectResponse
     {
-        DB::transaction(function () use ($request) {
+        Gate::authorize('create', User::class);
+
+        $validated = $request->validate([
+            'name'                     => ['required', 'string', 'max:150'],
+            'email'                    => ['required', 'string', 'email', 'max:255', 'unique:users,email'],
+            'password'                 => ['required', 'string', Password::default()],
+            'activo'                   => ['boolean'],
+            'curp'                     => ['nullable', 'string', 'size:18'],
+            'rfc'                      => ['nullable', 'string', 'min:10', 'max:13'],
+            'roles'                    => ['required', 'array', 'min:1'],
+            'roles.*'                  => ['integer', 'exists:roles,id'],
+            'unidad_organizacional_id' => ['required', 'integer', 'exists:unidades_organizacionales,id'],
+            'tipo_titularidad'         => ['required', 'string', Rule::in(['TITULAR', 'ENCARGADO_DESPACHO', 'SUPLENTE'])],
+        ]);
+
+        DB::transaction(function () use ($validated) {
+            $personaId = null;
+            if (! empty($validated['curp'])) {
+                $persona = Persona::firstOrCreate(
+                    ['curp' => strtoupper(trim($validated['curp']))],
+                    [
+                        'rfc'             => strtoupper(trim($validated['rfc'] ?? '')),
+                        'nombre'          => $validated['name'],
+                        'primer_apellido' => '',
+                    ]
+                );
+                $personaId = $persona->id;
+            }
+
             $user = User::create([
-                'name' => $request->validated('name'),
-                'email' => $request->validated('email'),
-                'password' => Hash::make($request->validated('password')),
-                'region_id' => $request->validated('region_id'),
-                'sala_id' => $request->validated('sala_id'),
-                'area_id' => $request->validated('area_id'),
-                'activo' => $request->boolean('activo', true),
+                'name'       => $validated['name'],
+                'email'      => $validated['email'],
+                'password'   => Hash::make($validated['password']),
+                'persona_id' => $personaId,
+                'activo'     => $validated['activo'] ?? true,
             ]);
 
-            $user->roles()->sync($request->validated('roles'));
+            $user->roles()->sync($validated['roles']);
+
+            Titularidad::create([
+                'unidad_organizacional_id' => $validated['unidad_organizacional_id'],
+                'user_id'                  => $user->id,
+                'tipo'                     => $validated['tipo_titularidad'],
+                'fecha_inicio'             => now()->toDateString(),
+                'activo'                   => true,
+            ]);
         });
 
-        return to_route('usuarios.index')->with('success', 'Servidor público registrado exitosamente.');
+        return to_route('usuarios.index')->with('success', 'Servidor público registrado correctamente.');
     }
 
-    /**
-     * Actualizar datos del servidor público o cambio de contraseña según el rol.
-     */
-    public function update(UpdateUserRequest $request, User $usuario): RedirectResponse
+    public function update(Request $request, User $usuario): RedirectResponse
     {
-        // Si es Magistrado: solo actualiza la contraseña de su subordinado
+        Gate::authorize('update', $usuario);
+
+        // Si no es admin DGTIC, solo puede actualizar contraseña
         if (! $request->user()->hasRole('ADMIN_DGTIC')) {
-            $usuario->update([
-                'password' => Hash::make($request->validated('password')),
+            $validated = $request->validate([
+                'password' => ['required', 'string', Password::default()],
             ]);
+
+            $usuario->update(['password' => Hash::make($validated['password'])]);
 
             return to_route('usuarios.index')->with('success', 'Contraseña actualizada correctamente.');
         }
 
-        // Si es ADMIN_DGTIC: actualiza expediente completo, roles y adscripción
-        DB::transaction(function () use ($request, $usuario) {
-            $datos = [
-                'name' => $request->validated('name'),
-                'email' => $request->validated('email'),
-                'region_id' => $request->validated('region_id'),
-                'sala_id' => $request->validated('sala_id'),
-                'area_id' => $request->validated('area_id'),
-                'activo' => $request->boolean('activo', $usuario->activo),
+        $validated = $request->validate([
+            'name'                     => ['required', 'string', 'max:150'],
+            'email'                    => ['required', 'string', 'email', 'max:255', Rule::unique('users', 'email')->ignore($usuario->id)],
+            'password'                 => ['nullable', 'string', Password::default()],
+            'activo'                   => ['boolean'],
+            'roles'                    => ['required', 'array', 'min:1'],
+            'roles.*'                  => ['integer', 'exists:roles,id'],
+            'unidad_organizacional_id' => ['required', 'integer', 'exists:unidades_organizacionales,id'],
+            'tipo_titularidad'         => ['required', 'string', Rule::in(['TITULAR', 'ENCARGADO_DESPACHO', 'SUPLENTE'])],
+        ]);
+
+        DB::transaction(function () use ($usuario, $validated) {
+            $datosUser = [
+                'name'   => $validated['name'],
+                'email'  => $validated['email'],
+                'activo' => $validated['activo'] ?? $usuario->activo,
             ];
 
-            if ($request->filled('password')) {
-                $datos['password'] = Hash::make($request->validated('password'));
+            if (! empty($validated['password'])) {
+                $datosUser['password'] = Hash::make($validated['password']);
             }
 
-            $usuario->update($datos);
-            $usuario->roles()->sync($request->validated('roles'));
+            $usuario->update($datosUser);
+            $usuario->roles()->sync($validated['roles']);
+
+            // Gestión de cambio de titularidad en el grafo
+            $titularidadActiva = $usuario->titularidadActiva;
+            $cambioUnidad = ! $titularidadActiva || $titularidadActiva->unidad_organizacional_id !== $validated['unidad_organizacional_id'];
+            $cambioTipo = $titularidadActiva && $titularidadActiva->tipo !== $validated['tipo_titularidad'];
+
+            if ($cambioUnidad || $cambioTipo) {
+                if ($titularidadActiva) {
+                    $titularidadActiva->update([
+                        'activo'    => false,
+                        'fecha_fin' => now()->toDateString(),
+                    ]);
+                }
+
+                Titularidad::create([
+                    'unidad_organizacional_id' => $validated['unidad_organizacional_id'],
+                    'user_id'                  => $usuario->id,
+                    'tipo'                     => $validated['tipo_titularidad'],
+                    'fecha_inicio'             => now()->toDateString(),
+                    'activo'                   => true,
+                ]);
+            }
         });
 
-        return to_route('usuarios.index')->with('success', 'Expediente institucional actualizado correctamente.');
+        return to_route('usuarios.index')->with('success', 'Expediente de usuario actualizado.');
     }
 
-    /**
-     * Baja lógica institucional del personal en el sistema.
-     */
     public function destroy(User $usuario): RedirectResponse
     {
         Gate::authorize('delete', $usuario);
 
-        $usuario->update(['activo' => false]);
+        DB::transaction(function () use ($usuario) {
+            $usuario->update(['activo' => false]);
+            $usuario->titularidades()->where('activo', true)->update([
+                'activo'    => false,
+                'fecha_fin' => now()->toDateString(),
+            ]);
+        });
 
-        return to_route('usuarios.index')->with('success', 'Servidor público desactivado.');
-    }
-
-    /*
-    |--------------------------------------------------------------------------
-    | Endpoints para selectores en cascada (Wayfinder)
-    |--------------------------------------------------------------------------
-    */
-
-    /**
-     * Catálogo dinámico de salas filtradas por circunscripción regional.
-     */
-    public function salasPorRegion(Region $region): JsonResponse
-    {
-        return response()->json(
-            $region->salas()
-                ->where('activo', true)
-                ->select(['id', 'clave', 'nombre', 'tipo'])
-                ->orderBy('nombre')
-                ->get()
-        );
+        return to_route('usuarios.index')->with('success', 'Usuario desactivado correctamente.');
     }
 
     /**
-     * Catálogo dinámico de ponencias/áreas filtradas por sala.
+     * Construye el árbol jerárquico para el selector del frontend.
      */
-    public function areasPorSala(Sala $sala): JsonResponse
+    protected function obtenerArbolUnidades(): array
     {
-        return response()->json(
-            $sala->areas()
-                ->where('activo', true)
-                ->select(['id', 'clave', 'nombre', 'tipo', 'numero'])
-                ->orderBy('tipo')
-                ->orderBy('numero')
-                ->get()
-        );
+        $unidades = UnidadOrganizacional::with('tipo:id,clave,nombre')
+            ->where('activo', true)
+            ->orderBy('nombre')
+            ->get();
+
+        return $this->armarRamas($unidades, null);
+    }
+
+    protected function armarRamas($unidades, ?int $padreId): array
+    {
+        $rama = [];
+        foreach ($unidades->where('padre_id', $padreId) as $unidad) {
+            $hijos = $this->armarRamas($unidades, $unidad->id);
+            $item = [
+                'id'     => $unidad->id,
+                'clave'  => $unidad->clave,
+                'nombre' => $unidad->nombre,
+                'tipo'   => $unidad->tipo?->clave,
+            ];
+            if (! empty($hijos)) {
+                $item['hijos'] = $hijos;
+            }
+            $rama[] = $item;
+        }
+        return $rama;
     }
 }

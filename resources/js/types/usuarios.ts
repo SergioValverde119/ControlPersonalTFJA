@@ -1,5 +1,5 @@
 // ============================================================================
-// CATÁLOGOS Y ROLES INSTITUCIONALES (TFJA)
+// ROLES INSTITUCIONALES (TFJA)
 // ============================================================================
 
 export type RolClave =
@@ -15,29 +15,54 @@ export interface Rol {
     nombre: string;
 }
 
-export interface Region {
+// ============================================================================
+// IDENTIDAD CIVIL Y GRAFO ORGANIZACIONAL
+// ============================================================================
+
+export interface Persona {
+    id: number;
+    curp: string;
+    rfc: string;
+}
+
+export type TipoTitularidad = 'TITULAR' | 'ENCARGADO_DESPACHO' | 'SUPLENTE';
+
+export type TipoUnidadClave =
+    | 'ORGANO_CENTRAL'
+    | 'TERRITORIO'
+    | 'SEDE'
+    | 'SALA'
+    | 'PONENCIA'
+    | 'AREA_ADMINISTRATIVA';
+
+export interface UnidadTipo {
     id: number;
     clave: string;
     nombre: string;
 }
 
-export interface Sala {
+export interface UnidadOrganizacional {
     id: number;
     clave: string;
     nombre: string;
-    tipo: string;
+    tipo: TipoUnidadClave | UnidadTipo | string;
+    hijos?: UnidadOrganizacional[];
 }
 
-export interface Area {
+export interface TitularidadActiva {
     id: number;
-    clave: string;
-    nombre: string;
-    tipo: string;
-    numero: number | null;
+    tipo: TipoTitularidad;
+    fecha_inicio?: string;
+    unidad: {
+        id: number;
+        clave: string;
+        nombre: string;
+        tipo?: UnidadTipo | string;
+    };
 }
 
 // ============================================================================
-// ENTIDAD USUARIO Y RELACIONES
+// ENTIDAD USUARIO
 // ============================================================================
 
 export interface Usuario {
@@ -45,14 +70,10 @@ export interface Usuario {
     name: string;
     email: string;
     activo: boolean;
-    region_id: number | null;
-    sala_id: number | null;
-    area_id: number | null;
-    region?: Region | null;
-    sala?: Sala | null;
-    area?: Area | null;
+    persona?: Persona | null;
     roles: Rol[];
-    created_at: string;
+    titularidad_activa?: TitularidadActiva | null;
+    created_at?: string;
 }
 
 // ============================================================================
@@ -77,31 +98,44 @@ export interface PaginatedData<T> {
 }
 
 export interface UsuarioFiltros {
-    buscar?: string;
-    region_id?: number | string;
-    sala_id?: number | string;
-    area_id?: number | string;
-    role_id?: number | string;
+    buscar?: string | null;
+    unidad_id?: number | string | null;
+    role_id?: number | string | null;
 }
 
 export interface UsuariosIndexProps {
     usuarios: PaginatedData<Usuario>;
+    roles_disponibles: Rol[];
+    unidades_arbol: UnidadOrganizacional[];
     filtros: UsuarioFiltros;
-    regiones: Region[];
-    roles: Rol[];
 }
 
 // ============================================================================
 // PAYLOADS PARA FORMULARIOS (POST / PUT)
 // ============================================================================
 
-export interface UsuarioFormPayload {
+export interface UsuarioStorePayload {
+    name: string;
+    email: string;
+    password: string;
+    curp: string;
+    rfc: string;
+    roles: number[];
+    unidad_organizacional_id: number | null;
+    tipo_titularidad: TipoTitularidad;
+    activo: boolean;
+}
+
+export interface UsuarioUpdatePayload {
     name: string;
     email: string;
     password?: string | null;
     roles: number[];
-    region_id: number | null;
-    sala_id: number | null;
-    area_id: number | null;
+    unidad_organizacional_id: number | null;
+    tipo_titularidad: TipoTitularidad;
     activo: boolean;
+}
+
+export interface UsuarioResetPasswordPayload {
+    password: string;
 }

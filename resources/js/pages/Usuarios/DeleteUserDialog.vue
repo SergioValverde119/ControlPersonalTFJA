@@ -39,13 +39,20 @@ const emit = defineEmits<{
                     <DialogTitle class="text-amber-800">Confirmar Desactivación</DialogTitle>
                 </div>
                 <DialogDescription>
-                    Esta acción suspenderá el acceso del servidor público al sistema sin alterar su historial ni sus registros de auditoría.
+                    Esta acción suspenderá el acceso del servidor público y dará por concluida su titularidad activa en el árbol organizacional, conservando intactos sus registros históricos de auditoría.
                 </DialogDescription>
             </DialogHeader>
 
-            <div v-if="props.usuario" class="p-3 bg-amber-50 border border-amber-200 text-xs text-amber-900 space-y-1">
+            <div v-if="props.usuario" class="p-3 bg-amber-50 border border-amber-200 text-xs text-amber-900 space-y-1.5">
                 <p><strong>Servidor Público:</strong> {{ props.usuario.name }}</p>
                 <p><strong>Correo Oficial:</strong> {{ props.usuario.email }}</p>
+                <p v-if="props.usuario.persona?.curp">
+                    <strong>CURP:</strong> <span class="font-mono">{{ props.usuario.persona.curp }}</span>
+                </p>
+                <p v-if="props.usuario.titularidad_activa">
+                    <strong>Adscripción actual:</strong>
+                    {{ props.usuario.titularidad_activa.unidad.nombre }} ({{ props.usuario.titularidad_activa.tipo }})
+                </p>
             </div>
 
             <DialogFooter class="gap-2">

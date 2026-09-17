@@ -100,5 +100,23 @@ Route::middleware(['auth'])->prefix('autorizar')->name('autorizar.')->group(func
     })->name('historial-firma');
 });
 
+
+Route::middleware(['auth'])->prefix('autorizar')->name('autorizar.')->group(function () {
+    Route::get('/', function () {
+        return redirect()->route('autorizar.pendientes-vobo');
+    })->name('index');
+
+    Route::get('/pendientes-vobo', [AutorizacionController::class, 'pendientesVoBo'])->name('pendientes-vobo');
+    Route::get('/por-autorizar', [AutorizacionController::class, 'porAutorizar'])->name('por-autorizar');
+    Route::get('/devueltos', [AutorizacionController::class, 'devueltos'])->name('devueltos');
+    Route::get('/historial-firma', [AutorizacionController::class, 'historialFirma'])->name('historial-firma');
+
+    // Acción de firma / devolución
+    Route::post('/firmas/{firma}/procesar', [AutorizacionController::class, 'procesarFirma'])->name('procesar');
+});
+
+
+
+
 require __DIR__.'/settings.php';
 require __DIR__.'/usuarios.php';

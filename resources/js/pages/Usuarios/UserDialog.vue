@@ -1,7 +1,8 @@
 <!-- eslint-disable import/order -->
 <script setup lang="ts">
 import { useForm } from '@inertiajs/vue3';
-import { computed, ref, watch } from 'vue';
+import { computed, watch } from 'vue';
+import UnidadTreeSelect from '@/components/custom/UnidadTreeSelect.vue';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import {
@@ -25,23 +26,17 @@ import {
 import { toUrl } from '@/lib/utils';
 import usuariosRoutes from '@/routes/usuarios';
 import type {
-    Area,
-    Region,
     Rol,
-    Sala,
+    TipoTitularidad,
+    UnidadOrganizacional,
     Usuario,
-    UsuarioFormPayload,
 } from '@/types/usuarios';
 
 type Props = {
     open: boolean;
     usuario: Usuario | null;
     roles: Rol[];
-    regiones: Region[];
-};
-
-type FormState = Omit<UsuarioFormPayload, 'password'> & {
-    password: string;
+    unidadesArbol: UnidadOrganizacional[];
 };
 
 const props = defineProps<Props>();
@@ -50,126 +45,85 @@ const emit = defineEmits<{
     (e: 'update:open', value: boolean): void;
 }>();
 
-const esEdicion = computed(() => !!props.usuario);
+const esEdicion = computed(() => {
+    return !!props.usuario;
+});
 
-const salasOptions = ref<Sala[]>([]);
-const areasOptions = ref<Area[]>([]);
-const cargandoSalas = ref(false);
-const cargandoAreas = ref(false);
-
-const form = useForm<FormState>({
+const form = useForm({
     name: '',
     email: '',
     password: '',
-    roles: [],
-    region_id: null,
-    sala_id: null,
-    area_id: null,
+    curp: '',
+    rfc: '',
+    roles: [] as number[],
+    unidad_organizacional_id: null as number | null,
+    tipo_titularidad: 'TITULAR' as TipoTitularidad,
     activo: true,
 });
 
 const selectedRoleId = computed({
-    get: () => (form.roles.length > 0 ? String(form.roles[0]) : ''),
+    get: () => {
+        if (form.roles.length > 0) {
+            return String(form.roles[0]);
+        }
+
+        return '';
+    },
     set: (val: string) => {
-        form.roles = val ? [Number(val)] : [];
+        if (val) {
+            form.roles = [Number(val)];
+        } else {
+            form.roles = [];
+        }
     },
 });
 
-const cargarSalas = async (regionId: number) => {
-    try {
-        cargandoSalas.value = true;
-
-        const response = await fetch(`/catalogos/regiones/${regionId}/salas`);
-
-        if (response.ok) {
-            salasOptions.value = await response.json();
-        }
-    } finally {
-        cargandoSalas.value = false;
-    }
-};
-
-const cargarAreas = async (salaId: number) => {
-    try {
-        cargandoAreas.value = true;
-
-        const response = await fetch(`/catalogos/salas/${salaId}/areas`);
-
-        if (response.ok) {
-            areasOptions.value = await response.json();
-        }
-    } finally {
-        cargandoAreas.value = false;
-    }
-};
-
-const onRegionChange = async (val: unknown) => {
-    const regId = Number(val);
-
-    form.region_id = regId || null;
-    form.sala_id = null;
-    form.area_id = null;
-    salasOptions.value = [];
-    areasOptions.value = [];
-
-    if (regId) {
-        await cargarSalas(regId);
-    }
-};
-
-const onSalaChange = async (val: unknown) => {
-    const sId = Number(val);
-
-    form.sala_id = sId || null;
-    form.area_id = null;
-    areasOptions.value = [];
-
-    if (sId) {
-        await cargarAreas(sId);
-    }
-};
-
 watch(
     () => props.usuario,
-    async (nuevoUsuario) => {
+    (nuevoUsuario) => {
         if (nuevoUsuario) {
             form.name = nuevoUsuario.name ?? '';
             form.email = nuevoUsuario.email ?? '';
             form.password = '';
+            form.curp = nuevoUsuario.persona?.curp ?? '';
+            form.rfc = nuevoUsuario.persona?.rfc ?? '';
             form.roles = nuevoUsuario.roles?.map((r) => r.id) ?? [];
-            form.region_id = nuevoUsuario.region_id ?? null;
-            form.sala_id = nuevoUsuario.sala_id ?? null;
-            form.area_id = nuevoUsuario.area_id ?? null;
+            form.unidad_organizacional_id = nuevoUsuario.titularidad_activa?.unidad?.id ?? null;
+            form.tipo_titularidad = nuevoUsuario.titularidad_activa?.tipo ?? 'TITULAR';
             form.activo = nuevoUsuario.activo ?? true;
-
-            if (nuevoUsuario.region_id) {
-                await cargarSalas(nuevoUsuario.region_id);
-            }
-
-            if (nuevoUsuario.sala_id) {
-                await cargarAreas(nuevoUsuario.sala_id);
-            }
         } else {
             form.reset();
             form.clearErrors();
-            salasOptions.value = [];
-            areasOptions.value = [];
+            form.roles = [];
+            form.unidad_organizacional_id = null;
+            form.tipo_titularidad = 'TITULAR';
+            form.activo = true;
         }
     },
     { immediate: true },
 );
 
 const submit = () => {
-    form.transform((data) => ({
-        ...data,
-        password: data.password ? data.password : null,
-        region_id: data.region_id ? Number(data.region_id) : null,
-        sala_id: data.sala_id ? Number(data.sala_id) : null,
-        area_id: data.area_id ? Number(data.area_id) : null,
-    }));
+    const payload = {
+        name: form.name,
+        email: form.email,
+        password: form.password ? form.password : null,
+        activo: form.activo,
+        roles: form.roles,
+        unidad_organizacional_id: form.unidad_organizacional_id
+            ? Number(form.unidad_organizacional_id)
+            : null,
+        tipo_titularidad: form.tipo_titularidad,
+        ...(esEdicion.value
+            ? {}
+            : {
+                  curp: form.curp.toUpperCase().trim(),
+                  rfc: form.rfc.toUpperCase().trim(),
+              }),
+    };
 
     if (props.usuario) {
-        form.put(toUrl(usuariosRoutes.update(props.usuario.id)), {
+        form.transform(() => payload).put(toUrl(usuariosRoutes.update(props.usuario.id)), {
             preserveScroll: true,
             onSuccess: () => {
                 emit('update:open', false);
@@ -177,7 +131,7 @@ const submit = () => {
             },
         });
     } else {
-        form.post(toUrl(usuariosRoutes.store()), {
+        form.transform(() => payload).post(toUrl(usuariosRoutes.store()), {
             preserveScroll: true,
             onSuccess: () => {
                 emit('update:open', false);
@@ -193,18 +147,23 @@ const submit = () => {
         :open="props.open"
         @update:open="(val) => emit('update:open', val)"
     >
-        <DialogContent class="sm:max-w-xl" :show-close-button="!form.processing">
-            <form @submit.prevent="submit" class="space-y-4">
+        <DialogContent class="sm:max-w-xl max-h-[90vh] overflow-y-auto" :show-close-button="!form.processing">
+            <form class="space-y-4" @submit.prevent="submit">
                 <DialogHeader>
                     <DialogTitle>
                         {{ esEdicion ? 'Actualizar Servidor Público' : 'Registrar Nuevo Servidor Público' }}
                     </DialogTitle>
                     <DialogDescription>
-                        Asigne los datos generales, perfil institucional y adscripción jurisdiccional en cascada.
+                        {{
+                            esEdicion
+                                ? 'Modifique las credenciales, perfiles o la adscripción en el árbol organizacional.'
+                                : 'Capture la identidad civil, cuenta institucional y asigne la plaza correspondiente.'
+                        }}
                     </DialogDescription>
                 </DialogHeader>
 
                 <div class="py-2 space-y-3 text-xs">
+                    <!-- Nombre Completo -->
                     <div class="space-y-1.5">
                         <Label for="usr-name" class="font-bold text-slate-700 uppercase">
                             Nombre Completo <span class="text-red-600">*</span>
@@ -213,15 +172,71 @@ const submit = () => {
                             id="usr-name"
                             v-model="form.name"
                             type="text"
-                            placeholder="Ej. Lic. Roberto Méndez Cruz"
+                            placeholder="Ej. Lic. Fernando Garza Ruiz"
                             :disabled="form.processing"
                             :aria-invalid="!!form.errors.name"
+                            required
                         />
                         <span v-if="form.errors.name" class="text-[11px] text-red-600 block">
                             {{ form.errors.name }}
                         </span>
                     </div>
 
+                    <!-- Identidad Civil (Solo creación; en edición es inmutable) -->
+                    <div v-if="!esEdicion" class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <div class="space-y-1.5">
+                            <Label for="usr-curp" class="font-bold text-slate-700 uppercase">
+                                CURP <span class="text-red-600">*</span>
+                            </Label>
+                            <Input
+                                id="usr-curp"
+                                v-model="form.curp"
+                                type="text"
+                                maxlength="18"
+                                class="uppercase font-mono"
+                                placeholder="18 caracteres"
+                                :disabled="form.processing"
+                                :aria-invalid="!!form.errors.curp"
+                                required
+                            />
+                            <span v-if="form.errors.curp" class="text-[11px] text-red-600 block">
+                                {{ form.errors.curp }}
+                            </span>
+                        </div>
+
+                        <div class="space-y-1.5">
+                            <Label for="usr-rfc" class="font-bold text-slate-700 uppercase">
+                                RFC <span class="text-red-600">*</span>
+                            </Label>
+                            <Input
+                                id="usr-rfc"
+                                v-model="form.rfc"
+                                type="text"
+                                maxlength="13"
+                                class="uppercase font-mono"
+                                placeholder="12 o 13 caracteres"
+                                :disabled="form.processing"
+                                :aria-invalid="!!form.errors.rfc"
+                                required
+                            />
+                            <span v-if="form.errors.rfc" class="text-[11px] text-red-600 block">
+                                {{ form.errors.rfc }}
+                            </span>
+                        </div>
+                    </div>
+
+                    <div v-else class="p-2.5 bg-slate-50 border border-slate-200 flex gap-6 text-[11px]">
+                        <div>
+                            <span class="font-bold uppercase text-slate-500">CURP:</span>
+                            <span class="font-mono font-semibold ml-1.5 text-slate-800">{{ form.curp || 'Sin registro' }}</span>
+                        </div>
+                        <div>
+                            <span class="font-bold uppercase text-slate-500">RFC:</span>
+                            <span class="font-mono font-semibold ml-1.5 text-slate-800">{{ form.rfc || '—' }}</span>
+                        </div>
+                    </div>
+
+                    <!-- Credenciales -->
                     <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
                         <div class="space-y-1.5">
                             <Label for="usr-email" class="font-bold text-slate-700 uppercase">
@@ -234,6 +249,7 @@ const submit = () => {
                                 placeholder="usuario@tfja.gob.mx"
                                 :disabled="form.processing"
                                 :aria-invalid="!!form.errors.email"
+                                required
                             />
                             <span v-if="form.errors.email" class="text-[11px] text-red-600 block">
                                 {{ form.errors.email }}
@@ -250,9 +266,10 @@ const submit = () => {
                                 id="usr-password"
                                 v-model="form.password"
                                 type="password"
-                                placeholder="••••••••••••"
+                                :placeholder="esEdicion ? 'Mantener contraseña actual' : '••••••••••••'"
                                 :disabled="form.processing"
                                 :aria-invalid="!!form.errors.password"
+                                :required="!esEdicion"
                             />
                             <span v-if="form.errors.password" class="text-[11px] text-red-600 block">
                                 {{ form.errors.password }}
@@ -260,6 +277,7 @@ const submit = () => {
                         </div>
                     </div>
 
+                    <!-- Rol Institucional -->
                     <div class="space-y-1.5">
                         <Label for="usr-role" class="font-bold text-slate-700 uppercase">
                             Rol Institucional <span class="text-red-600">*</span>
@@ -268,7 +286,7 @@ const submit = () => {
                             v-model="selectedRoleId"
                             :disabled="form.processing"
                         >
-                            <SelectTrigger id="usr-role" class="w-full" :aria-invalid="!!form.errors.roles">
+                            <SelectTrigger id="usr-role" class="w-full bg-white" :aria-invalid="!!form.errors.roles">
                                 <SelectValue placeholder="Seleccione un perfil institucional..." />
                             </SelectTrigger>
                             <SelectContent>
@@ -286,84 +304,49 @@ const submit = () => {
                         </span>
                     </div>
 
+                    <!-- Adscripción Organizacional (Grafo) -->
                     <div class="p-3 bg-slate-50 border border-slate-200 space-y-3">
                         <span class="font-bold text-slate-800 uppercase tracking-wide block text-[11px]">
-                            Adscripción Jurisdiccional
+                            Adscripción Organizacional
                         </span>
 
-                        <div class="space-y-1.5">
-                            <Label class="font-bold text-slate-700 uppercase">
-                                1. Región
-                            </Label>
-                            <Select
-                                :model-value="form.region_id ? String(form.region_id) : undefined"
-                                :disabled="form.processing"
-                                @update:model-value="onRegionChange"
-                            >
-                                <SelectTrigger class="w-full bg-white">
-                                    <SelectValue placeholder="Seleccione región..." />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    <SelectItem
-                                        v-for="reg in props.regiones"
-                                        :key="reg.id"
-                                        :value="String(reg.id)"
-                                    >
-                                        {{ reg.nombre }}
-                                    </SelectItem>
-                                </SelectContent>
-                            </Select>
-                        </div>
+                        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                            <div class="sm:col-span-2 space-y-1.5">
+                                <Label class="font-bold text-slate-700 uppercase">
+                                    Unidad del Árbol <span class="text-red-600">*</span>
+                                </Label>
+                                <UnidadTreeSelect
+                                    v-model="form.unidad_organizacional_id"
+                                    :unidades="props.unidadesArbol"
+                                    :disabled="form.processing"
+                                />
+                                <span v-if="form.errors.unidad_organizacional_id" class="text-[11px] text-red-600 block">
+                                    {{ form.errors.unidad_organizacional_id }}
+                                </span>
+                            </div>
 
-                        <div class="space-y-1.5">
-                            <Label class="font-bold text-slate-700 uppercase">
-                                2. Sala Regional
-                            </Label>
-                            <Select
-                                :model-value="form.sala_id ? String(form.sala_id) : undefined"
-                                :disabled="form.processing || !form.region_id || cargandoSalas"
-                                @update:model-value="onSalaChange"
-                            >
-                                <SelectTrigger class="w-full bg-white">
-                                    <SelectValue :placeholder="form.region_id ? (cargandoSalas ? 'Cargando salas...' : 'Seleccione sala regional...') : 'Primero elija una región'" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    <SelectItem
-                                        v-for="sala in salasOptions"
-                                        :key="sala.id"
-                                        :value="String(sala.id)"
-                                    >
-                                        {{ sala.nombre }}
-                                    </SelectItem>
-                                </SelectContent>
-                            </Select>
-                        </div>
-
-                        <div class="space-y-1.5">
-                            <Label class="font-bold text-slate-700 uppercase">
-                                3. Área / Ponencia
-                            </Label>
-                            <Select
-                                :model-value="form.area_id ? String(form.area_id) : undefined"
-                                :disabled="form.processing || !form.sala_id || cargandoAreas"
-                                @update:model-value="(val) => form.area_id = val ? Number(val) : null"
-                            >
-                                <SelectTrigger class="w-full bg-white">
-                                    <SelectValue :placeholder="form.sala_id ? (cargandoAreas ? 'Cargando áreas...' : 'Seleccione área o ponencia...') : 'Primero elija una sala'" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    <SelectItem
-                                        v-for="area in areasOptions"
-                                        :key="area.id"
-                                        :value="String(area.id)"
-                                    >
-                                        {{ area.nombre }}
-                                    </SelectItem>
-                                </SelectContent>
-                            </Select>
+                            <div class="space-y-1.5">
+                                <Label class="font-bold text-slate-700 uppercase">
+                                    Titularidad <span class="text-red-600">*</span>
+                                </Label>
+                                <Select
+                                    v-model="form.tipo_titularidad"
+                                    :disabled="form.processing"
+                                >
+                                    <SelectTrigger class="w-full bg-white">
+                                        <SelectValue />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="TITULAR">Titular</SelectItem>
+                                        <SelectItem value="ENCARGADO_DESPACHO">Encargado de Despacho</SelectItem>
+                                        <SelectItem value="SUPLENTE">Suplente</SelectItem>
+                                    </SelectContent>
+                                </Select>
+                            </div>
                         </div>
                     </div>
 
+                    <!-- Estatus Activo -->
                     <div class="flex items-center gap-2.5 pt-1">
                         <Checkbox
                             id="usr-activo"
